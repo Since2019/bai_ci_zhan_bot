@@ -1,10 +1,16 @@
 import numpy as np
 import cv2 as cv
+import os
+import datetime
+
 # 設置Kernel
 kernel = np.ones((5, 5), np.uint8)
 
 # 设置putText函数字体
 font = cv.FONT_HERSHEY_SIMPLEX
+
+
+OUTPUT_PATH = os.path.join(os.getcwd(), 'IMG_TEMP', 'detect_pictures')
 
 
 def angle_cos(p0, p1, p2):
@@ -22,13 +28,13 @@ def find_squares(img):
     gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     bin = cv.Canny(gray, 5, 10, apertureSize=3)
 
-    imgDialation = cv.dilate(bin, kernel, iterations=1)
+    imgDialation = cv.dilate(bin, kernel, iterations=3)
 
-    # cv.imshow("imgDialation", imgDialation)
+    cv.imshow("imgDialation", imgDialation)
     # cv.imshow('canny', bin)
 
     contours, _hierarchy = cv.findContours(
-        imgDialation, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        imgDialation, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
     print("轮廓数量：%d" % len(contours))
     index = 0
     # 轮廓遍历
@@ -36,7 +42,7 @@ def find_squares(img):
         cnt_len = cv.arcLength(cnt, True)  # 计算轮廓周长
         cnt = cv.approxPolyDP(cnt, 0.02*cnt_len, True)  # 多边形逼近
         # 条件判断逼近边的数量是否为4，轮廓面积是否大于1000，检测轮廓是否为凸的
-        if len(cnt) == 4 and cv.contourArea(cnt) > 1000 and cv.isContourConvex(cnt):
+        if len(cnt) == 4 and cv.contourArea(cnt) > 50000 and cv.contourArea(cnt) < 80000 and cv.isContourConvex(cnt):
             M = cv.moments(cnt)  # 计算轮廓的矩
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])  # 轮廓重心
@@ -51,10 +57,25 @@ def find_squares(img):
                 index = index + 1
                 cv.putText(img, ("#%d" % index), (cx, cy),
                            font, 0.7, (255, 0, 255), 2)
+
                 squares.append(cnt)
                 square_centers.append((cx, cy))
 
     print(len(squares), square_centers, len(img))
+
+    for sqr in squares:
+        print('size: ' + str(cv.contourArea(sqr)))
+
+    # 给它围上绿色的框框
+    cv.drawContours(img, squares, -1, (0, 255, 0), 2)
+
+    cv.imwrite(os.path.join(
+        os.getcwd(), 'IMG_TEMP', 'pic ' +
+        datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        + '.jpg'),
+        img
+    )
+
     return squares, square_centers, img
 
 
@@ -67,10 +88,22 @@ def find_pictures(frame):  # 寻找单词图片
     '''
     square_cnts, square_centers, img = find_squares(frame)
 
-    print(' print(cv.contourArea(contour))')
-    for idx, contour in enumerate(square_cnts):
-        # print(cv.contourArea(contour))
-        cv.drawContours(img, square_cnts, -1, (0, 0, 255), 2)
+    print('print(cv.contourArea(contour))')
+    # for idx, contour in enumerate(square_cnts):
+    # print(cv.contourArea(contour))
+
+    cv.drawContours(img, square_cnts, -1, (0, 0, 255), 2)
+
+    print("保存路径：")
+    print((os.path.join(
+        OUTPUT_PATH, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        + '.jpg')))
+
+    cv.imwrite(os.path.join(
+        OUTPUT_PATH, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        + '.jpg'),
+        img
+    )
 
     # cv.imshow('squares', img)
     return square_cnts, square_centers, img
@@ -82,7 +115,7 @@ def main(frame):
         A function for testing
 
         传入一帧，在这一帧上寻找方形的图片
-        pass in the frame and look for the flashcard pictures. 
+        pass in the frame and look for the flashcard pictures.
     '''
     # 输入的图片源
     img = cv.imread("./testing_images/continue_button.jpg")

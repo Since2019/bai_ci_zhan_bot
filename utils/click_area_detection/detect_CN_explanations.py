@@ -1,10 +1,17 @@
 import numpy as np
 import cv2 as cv
+import os
+import datetime
+
 # 設置Kernel
 kernel = np.ones((5, 5), np.uint8)
 
 # 设置putText函数字体
 font = cv.FONT_HERSHEY_SIMPLEX
+
+
+OUTPUT_PATH = os.path.join(
+    os.getcwd(), 'IMG_TEMP', 'detect_CN_explanations')
 
 
 def angle_cos(p0, p1, p2):
@@ -102,8 +109,28 @@ def find_squares_bichromatic(img):
                 index = index + 1
                 cv.putText(img, ("#%d" % index), (cx, cy),
                            font, 0.7, (255, 0, 255), 2)
+
                 squares.append(cnt)
                 square_centers.append((cx, cy))
+
+    # 给它围上绿色的框框
+    cv.drawContours(img, squares, -1, (0, 0, 255), 2)
+
+    cv.imwrite(os.path.join(
+        os.getcwd(), "IMG_TEMP", 'exp '+datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        + '.jpg'),
+        img
+    )
+
+    print("保存路径：")
+    print((os.path.join(
+        OUTPUT_PATH, datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+        + '.jpg')))
+
+    cv.imwrite(os.path.join(
+        OUTPUT_PATH, datetime.datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+        + '.jpg'),
+        img)
 
     return squares, square_centers, img
 
